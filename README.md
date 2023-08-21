@@ -29,7 +29,13 @@ As part of our interview process, we'd like to invite you to tackle a technical 
 
 # Tasks
 
-Please invest some time in acquainting yourself with the codebase, including Models, Controllers, and the database structure. Then, proceed to address the following tasks one by one.
+Please invest some time in acquainting yourself with the codebase, including Models, Controllers, and the database structure.
+
+Upload this code to a PRIVATE repository in GitHub. Invite the user [nicodevs](https://github.com/nicodevs/) to it.
+
+![Image](https://i.imgur.com/wxemxjk.png)
+
+Then, proceed to address the following tasks one by one.
 
 ## 1. Add the ability for users to favorite users
 
