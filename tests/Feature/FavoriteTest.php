@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Favorite;
 use App\Models\User;
 use App\Models\Post;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -29,7 +30,8 @@ class FavoriteTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('favorites', [
-            'post_id' => $post->id,
+            'parent_id' => $post->id,
+            'parent_type' => Post::class,
             'user_id' => $user->id,
         ]);
     }
@@ -44,7 +46,8 @@ class FavoriteTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseHas('favorites', [
-            'post_id' => $post->id,
+            'parent_id' => $post->id,
+            'parent_type' => Post::class,
             'user_id' => $user->id,
         ]);
 
@@ -53,7 +56,8 @@ class FavoriteTest extends TestCase
             ->assertNoContent();
 
         $this->assertDatabaseMissing('favorites', [
-            'post_id' => $post->id,
+            'parent_id' => $post->id,
+            'parent_type' => Post::class,
             'user_id' => $user->id,
         ]);
     }
@@ -65,6 +69,68 @@ class FavoriteTest extends TestCase
 
         $this->actingAs($user)
             ->deleteJson(route('favorites.destroy', ['post' => $post]))
+            ->assertNotFound();
+    }
+
+    public function test_a_user_can_favorite_another_user()
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('favorites.for_users.store', ['user' => $otherUser]))
+            ->assertCreated();
+
+        $this->assertDatabaseHas('favorites', [
+            'user_id' => $user->id,
+            'parent_id' => $otherUser->id,
+            'parent_type' => User::class,
+        ]);
+    }
+
+    public function test_a_user_can_unfavorite_another_user()
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        // Pre-create the favorite
+        Favorite::factory()->create([
+            'user_id' => $user->id,
+            'parent_id' => $otherUser->id,
+            'parent_type' => User::class,
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson(route('favorites.for_users.destroy', ['user' => $otherUser]))
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('favorites', [
+            'user_id' => $user->id,
+            'parent_id' => $otherUser->id,
+            'parent_type' => User::class,
+        ]);
+    }
+
+    public function test_a_user_cannot_favorite_himself()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('favorites.for_users.store', ['user' => $user]))
+            ->assertUnprocessable();
+
+        $this->assertDatabaseMissing('favorites', [
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_a_user_cannot_unfavorite_a_user_that_is_not_favorited()
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($user)
+            ->deleteJson(route('favorites.for_users.destroy', ['user' => $otherUser]))
             ->assertNotFound();
     }
 }

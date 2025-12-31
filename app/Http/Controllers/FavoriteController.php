@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Requests\CreateFavoriteRequest;
 use Illuminate\Http\Response;
@@ -22,14 +23,19 @@ class FavoriteController extends Controller
 
     public function store(CreateFavoriteRequest $request, Post $post)
     {
-        $request->user()->favorites()->create(['post_id' => $post->id]);
+        $favorite = $request->user()->favorites()->create([]);
+        $favorite->parent()->associate($post);
+        $favorite->save();
 
         return response()->noContent(Response::HTTP_CREATED);
     }
 
     public function destroy(Request $request, Post $post)
     {
-        $favorite = $request->user()->favorites()->where('post_id', $post->id)->firstOrFail();
+        $favorite = $request->user()->favorites()
+            ->where('parent_id', $post->id)
+            ->where('parent_type', Post::class)
+            ->firstOrFail();
 
         $favorite->delete();
 
