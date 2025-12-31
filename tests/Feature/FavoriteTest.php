@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Favorite;
-use App\Models\User;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
@@ -132,5 +132,44 @@ class FavoriteTest extends TestCase
         $this->actingAs($user)
             ->deleteJson(route('favorites.for_users.destroy', ['user' => $otherUser]))
             ->assertNotFound();
+    }
+
+    public function test_favorites_index_returns_grouped_posts_and_users()
+    {
+        $user = User::factory()->create();
+
+        $post1 = Post::factory()->create(['user_id' => $user->id, 'title' => 'Post One']);
+        $post2 = Post::factory()->create(['user_id' => $user->id, 'title' => 'Post Two']);
+        $otherUser1 = User::factory()->create(['name' => 'Alice']);
+        $otherUser2 = User::factory()->create(['name' => 'Bob']);
+
+        $user->favorites()->create(['parent_id' => $post1->id, 'parent_type' => Post::class]);
+        $user->favorites()->create(['parent_id' => $post2->id, 'parent_type' => Post::class]);
+        $user->favorites()->create(['parent_id' => $otherUser1->id, 'parent_type' => User::class]);
+        $user->favorites()->create(['parent_id' => $otherUser2->id, 'parent_type' => User::class]);
+
+        // Act as the user and hit the endpoint
+        $response = $this->actingAs($user)->getJson(route('favorites.index'));
+
+        // Assert response structure
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'posts' => [
+                        '*' => [
+                            'id',
+                            'title',
+                            'body',
+                            'user' => [
+                                'id',
+                                'name',
+                            ],
+                        ],
+                    ],
+                    'users' => [
+                        '*' => ['id', 'name'],
+                    ],
+                ],
+            ]);
     }
 }

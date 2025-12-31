@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateFavoriteRequest;
+use App\Http\Resources\PostResource;
+use App\Http\Resources\UserResource;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
-use App\Http\Requests\CreateFavoriteRequest;
 use Illuminate\Http\Response;
 
 /**
@@ -17,8 +19,20 @@ class FavoriteController extends Controller
 {
     public function index(Request $request)
     {
-        $favorites = $request->user()->favorites;
-        return FavoriteResource::collection($favorites);
+        $favorites = $request->user()
+            ->favorites()
+            ->with('parent')
+            ->get();
+
+        $posts = $favorites->where('parent_type', Post::class)->values()->map(fn ($favorite) => $favorite->parent);
+        $users = $favorites->where('parent_type', User::class)->values()->map(fn ($favorite) => $favorite->parent);
+
+        return [
+            'data' => [
+                'posts' => PostResource::collection($posts),
+                'users' => UserResource::collection($users),
+            ],
+        ];
     }
 
     public function store(CreateFavoriteRequest $request, Post $post)
