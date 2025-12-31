@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreatePostRequest;
+use App\Http\Requests\DestroyPostRequest;
+use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
-use App\Http\Requests\CreatePostRequest;
-use App\Http\Requests\UpdatePostRequest;
-use App\Http\Requests\DestroyPostRequest;
+use App\Notifications\PostCreated;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * @group Posts
@@ -18,6 +20,7 @@ class PostController extends Controller
     public function index()
     {
         $posts = Post::with('user')->orderByDesc('created_at')->get();
+
         return PostResource::collection($posts);
     }
 
@@ -31,6 +34,9 @@ class PostController extends Controller
             'body' => $request->input('body'),
             'user_id' => $user->id,
         ]);
+
+        $userFavoriters = $user->favoritedBy()->with('user')->get()->pluck('user');
+        Notification::send($userFavoriters, new PostCreated($post));
 
         return new PostResource($post);
     }
