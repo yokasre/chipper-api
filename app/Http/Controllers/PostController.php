@@ -9,6 +9,7 @@ use App\Http\Resources\PostResource;
 use App\Models\Post;
 use App\Notifications\PostCreated;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 /**
  * @group Posts
@@ -28,11 +29,20 @@ class PostController extends Controller
     {
         $user = $request->user();
 
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
+            $path = $file->storeAs('posts', $filename, 'public');
+            $imageUrl = $path;
+        }
+
         // Create a new post
         $post = Post::create([
             'title' => $request->input('title'),
             'body' => $request->input('body'),
             'user_id' => $user->id,
+            'image_url' => $imageUrl,
         ]);
 
         $userFavoriters = $user->favoritedBy()->with('user')->get()->pluck('user');
